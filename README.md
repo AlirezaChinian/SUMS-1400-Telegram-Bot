@@ -19,12 +19,13 @@ A Telegram Bot that sends Documents and Videos of SUMS MD 1400. This Bot also co
   $ python3 database.py
 ```
 3. Define Main Bot and Support Bot Token in config.ini
-4. Define Bot admins(needs admins's chat_id) in config.ini
-5. Run bot.py to start Main Bot: 
+4. Change Bot admins(needs admins's chat_id) in config.ini
+5. Change Channel_id(it needs for mandatory membership) in config.ini
+6. Run bot.py to start Main Bot: 
 ```
   $ python3 bot.py
 ```
-6. Run talkbot.py to start Support Bot:
+7. Run talkbot.py to start Support Bot:
 ```
   $ python3 talkbot.py
 ```
