@@ -20,7 +20,7 @@ A Telegram Bot that sends Documents and Videos of SUMS MD 1400. This Bot also co
 ```
 3. Define Main Bot and Support Bot Token in config.ini
 4. Change Bot admins(needs admins's chat_id) in config.ini
-5. Change Channel_id(it needs for mandatory membership) in config.ini
+5. Change Channel_id(needs for mandatory membership) in config.ini
 6. Run bot.py to start Main Bot: 
 ```
   $ python3 bot.py
