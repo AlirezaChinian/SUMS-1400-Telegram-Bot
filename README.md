@@ -28,6 +28,8 @@ A Telegram Bot that sends Documents and Videos of SUMS MD 1400. This Bot also co
 ```
   $ python3 talkbot.py
 ```
+
+> Note: File IDs are unique for each Bot Token so sending file will not work due to that reason
 ## License
 SUMS 1400 Telegram Bot is licensed under the [GNU General Public License v3.0](https://github.com/AlirezaChinian/SUMS-1400-Telegram-Bot/blob/main/LICENSE)
 
