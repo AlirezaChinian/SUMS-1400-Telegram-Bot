@@ -3,7 +3,7 @@
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/python-telegram-bot.svg)](https://www.python.org)
 [![Bot API versions](https://img.shields.io/badge/Bot%20API-5.7-blue?logo=telegram)](https://api.telegram.org)
 
-A Telegram Bot that sends Documents and Videos of SUMS MD 1400. This Bot also contain a Support Bot.
+A Telegram Bot that sends Documents and Videos of SUMS MD 1400 with full admin panel. This Bot also contain a Support Bot.
 ## Requirements
 * Python3
 * pip
@@ -30,7 +30,7 @@ A Telegram Bot that sends Documents and Videos of SUMS MD 1400. This Bot also co
   $ python3 talkbot.py
 ```
 
-> Note: File IDs are unique for each Bot Token so sending file will not work due to that reason
+> Note: File IDs are unique for each Bot Token so sending file will not work due to this reason
 ## License
 SUMS 1400 Telegram Bot is licensed under the [GNU General Public License v3.0](https://github.com/AlirezaChinian/SUMS-1400-Telegram-Bot/blob/main/LICENSE)
 
