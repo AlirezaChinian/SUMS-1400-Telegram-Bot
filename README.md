@@ -1,7 +1,7 @@
 # SUMS 1400 Telegram Bot v Beta
-![LICENSE](https://img.shields.io/badge/LICENSE-GPL--3.0-green)
-![Supported Python versions](https://img.shields.io/pypi/pyversions/python-telegram-bot.svg)
-![Bot API versions](https://img.shields.io/badge/Bot%20API-5.7-blue?logo=telegram)
+[![LICENSE](https://img.shields.io/badge/LICENSE-GPL--3.0-green)](https://github.com/AlirezaChinian/SUMS-1400-Telegram-Bot/blob/main/LICENSE)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/python-telegram-bot.svg)](https://www.python.org)
+[![Bot API versions](https://img.shields.io/badge/Bot%20API-5.7-blue?logo=telegram)](https://api.telegram.org)
 
 A Telegram Bot that sends Documents and Videos of SUMS MD 1400
 ## Requirements
