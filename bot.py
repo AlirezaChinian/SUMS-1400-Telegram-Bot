@@ -332,15 +332,6 @@ def stat(update, context):
 
             else:
                 context.bot.send_message(chat_id=chat_id, text="بچه برو دنبال بازیت" + "\n" + "برا ما هکر شده")
-        
-        elif text == "موحدی":
-            context.bot.send_audio(chat_id=chat_id, audio="CQACAgQAAxkBAAIMqWIfO8st0T5qxyOYF_kgMyakuJ35AAKZDAAC9X34UETQDw-h35ICIwQ")
-        
-        elif text == "کربلایی" or text == "کربلایی زاده" or text == "خسته نباشید" or text == "خدا قوت" or text == "خدا قوت دهد":
-            context.bot.send_video(chat_id=chat_id, video="BAACAgQAAxkBAAIMiWIfOi62mYOOzqyaI3om3QgXDp7cAAKaDAAC9X34UKbIkl3HmeshIwQ")
-
-        elif text == "لاله" or text ==  "خجسته":
-            context.bot.send_message(chat_id=chat_id, text="دوغ و پیاز میقولی؟؟؟؟")
 
         else:
             pass
