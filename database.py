@@ -1,4 +1,5 @@
 import sqlite3
+from hashlib import md5
 
 con = sqlite3.connect("bot.db", check_same_thread=False)
 c = con.cursor()
@@ -26,6 +27,17 @@ def create_table():
                 Caption TEXT);'''
 
     c.execute(query3)
+
+    query4 = '''CREATE TABLE IF NOT EXISTS Admins
+                (User_name TEXT,
+                Password TEXT,
+                User_id INTEGER);'''
+
+    c.execute(query4)
+
+    # this bot use md5 to hash admins login passwords
+    # this user just created for test
+    c.execute('INSERT INTO Admins(User_name,Password,User_id) VALUES(?,?,?)',("test", md5("test".encode()).hexdigest(), 0))
 
     con.commit()
     con.close()

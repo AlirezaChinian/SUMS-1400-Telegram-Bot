@@ -1,13 +1,10 @@
-# -*- encoding:utf-8 -*-
+# -*- coding:utf-8 -*-
 
-from configparser import ConfigParser
 from telegram import Bot, ParseMode, TelegramError
 from ast import literal_eval
+import config
 
-config = ConfigParser()
-config.read('config.ini')
-
-TOKEN = config.get('TOKENS', 'support_bot_token')
+TOKEN = config.SUPPORT_BOT_TOKEN
 
 class ManageTalk():
     def __init__(self):

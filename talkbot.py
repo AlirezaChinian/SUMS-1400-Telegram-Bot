@@ -1,23 +1,17 @@
-# -*- encoding:utf-8 -*-
+# -*- coding:utf-8 -*-
 
-from lib2to3.pgen2 import token
 import logging
 import re
-from configparser import ConfigParser
 from ast import literal_eval
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, PicklePersistence
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton, ParseMode
 from AdminTalk import ManageTalk
 from Persian import Persian
+import config
 
 GETSUP, STATAD, GETTAKID, GETTAK = range(4)
-config = ConfigParser()
-config.read('config.ini')
 
-Admins = []
-
-for i in config.get('Admins', 'admins').split(","):
-    Admins.append(literal_eval(i))
+Admins = config.ADMINS
 
 persistence = PicklePersistence(filename='talkbot')
 
@@ -293,7 +287,7 @@ def cancel(update, context):
     pass
     
 def main():
-    token = config.get('TOKENS', 'support_bot_token')
+    token = config.SUPPORT_BOT_TOKEN
     updater = Updater(token=token, persistence=persistence)
     
     dispatcher = updater.dispatcher

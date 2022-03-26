@@ -1,18 +1,18 @@
-# -*- encoding:utf-8 -*-
+# -*- coding:utf-8 -*-
 
 import sqlite3
 import time
 import json
 import logging
 import re
-from configparser import ConfigParser
-from os import remove
 from ast import literal_eval
-from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, PicklePersistence, DispatcherHandlerStop
+from copy import copy
+from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, run_async
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
+from requests import get as getrequests
 from Admins import Manage
 from Persian import Persian
-from prettytable import PrettyTable
+import config
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
@@ -23,27 +23,23 @@ logger = logging.getLogger(__name__)
 con = sqlite3.connect("bot.db", check_same_thread=False)
 c = con.cursor()
 
-config = ConfigParser()
-config.read('config.ini')
+STAT, DOROST1, CHBIO, CHOT, CHSOTA, CHSOTN, CHSBIOA, CHSBION, CHSP, CHSR, CHSPH, CHSPE, CHSE1, CHSDA, CHSVBION, CHSVBIOA, CHSVOTN, CHSVOTA, CHSVP, CHSVR, CHSVPH, GETTERMBANK, SENDBANKT1, SENDBANKT2 = range(24)
+STATAD, GETSAR, GETTAK, GETTAKID, GETBAN, GETPRE, GETPREFILE, GETPREDEL, STATBLOCK, GETTERMCATEG = range(1000,1010)
 
-STAT, DOROST1, CHBIO, CHOT, CHSOTA, CHSOTN, CHSBIOA, CHSBION, CHSP, CHSR, CHSPH, CHSPE, CHSE1, CHSDA, CHSVBION, CHSVBIOA, CHSVOTN, CHSVOTA, CHSVP, CHSVR, CHSVPH = range(21)
-STATAD, GETSAR, GETTAK, GETTAKID, GETBAN, GETPRE, GETPREFILE, GETPREDEL, STATBLOCK = range(1000,1009)
+Admins = config.ADMINS
 
-Admins = []
+#Change Before Config
+SITE_ADDRESS = config.SITE_ADDRESS
+SEC_TOKEN = config.SEC_TOKEN
 
-for i in config.get('Admins', 'admins').split(","):
-    Admins.append(literal_eval(i))
-
-persistence = PicklePersistence(filename='telegrambot')
-
-BOT_ID = config.get('Channel', 'channel_id')
+#Change Before Config
+BOT_ID = "@Sums1400_Bot"
 BOT_ID2 = BOT_ID.replace("@", "")
-
-with open("files.json") as jj:
-     j = json.load(jj, strict=False)
 
 ret = "🔙 بازگشت"
 ret_menu = "🔙 بازگشت به منوی اصلی"
+
+MAX_USAGE = config.MAX_USAGE
 
 keyboard_doros_term1 = [
     [KeyboardButton(text="علوم تشریح 💀")],
@@ -54,7 +50,24 @@ keyboard_doros_term1 = [
     [KeyboardButton(text="فارسی 🇮🇷")],
     [KeyboardButton(text="زبان عمومی " + "1️⃣")],
     [KeyboardButton(text="دانش خانواده 👨‍👩‍👧‍👦")],
-    [KeyboardButton(text=ret)],
+    [KeyboardButton(text=ret)]
+]
+
+keyboard_doros_term2 = [
+    [KeyboardButton(text="دستگاه قلب 🫀")],
+    [KeyboardButton(text="دستگاه تنفس 🫁")],
+    [KeyboardButton(text="دستگاه غدد 🌋")],
+    [KeyboardButton(text="بیوشیمی دیسیپلین 🧪")],
+    [KeyboardButton(text="علوم تشریح عملی 💀")],
+    [KeyboardButton(text="فیزیولوژی عملی 🔎")],
+    [KeyboardButton(text="تغذیه 🍫")],
+    [KeyboardButton(text="کامپیوتر 💻")],
+    [KeyboardButton(text="زبان عمومی " + "2️⃣")],
+    [KeyboardButton(text="اندیشه اسلامی 📿")],
+    [KeyboardButton(text="انقلاب اسلامی 🕋")],
+    [KeyboardButton(text="جامعه شناسی سلامت 👥")],
+    [KeyboardButton(text="خلاقیت و کارآفرینی 💼")],
+    [KeyboardButton(text=ret)]
 ]
 
 keyboard_send = [
@@ -64,12 +77,19 @@ keyboard_send = [
     [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
 ]
 
+keyboard_select_term = [
+    [KeyboardButton(text="ترم 1️⃣")],
+    [KeyboardButton(text="ترم 2️⃣")],
+    [KeyboardButton(text=ret)]
+]
+
 def main_menu(update, context):
     chat_id = update.message.chat_id
 
     keyboard = [
         [KeyboardButton(text="ترم 1️⃣")],
         [KeyboardButton(text="ترم 2️⃣")],
+        [KeyboardButton(text="🏦 بانک سوال")],
         [KeyboardButton(text="📖 نواریون")],
         [KeyboardButton(text="📎 برنامه دروس و امتحانات")],
         [KeyboardButton(text="👤 پنل کاربری"), KeyboardButton(text="👨‍💻 پشتیبانی")],
@@ -79,41 +99,41 @@ def main_menu(update, context):
         [KeyboardButton(text="😎 پنل مدیریت")],
         [KeyboardButton(text="ترم 1️⃣")],
         [KeyboardButton(text="ترم 2️⃣")],
+        [KeyboardButton(text="🏦 بانک سوال")],
         [KeyboardButton(text="📖 نواریون")],
         [KeyboardButton(text="📎 برنامه دروس و امتحانات")],
         [KeyboardButton(text="👤 پنل کاربری"), KeyboardButton(text="👨‍💻 پشتیبانی")], 
     ]
 
-    chat_id2 = str(chat_id)
-    first_name = str(update.message.from_user.first_name)
-    last_name = str(update.message.from_user.last_name)
-    user_name = str(update.message.from_user.username)
-    user_id = str(update.message.from_user.id)
-
-    if user_name == "None":
-        user_name = "Empty"
-
-    else:
-        user_name = "@" + user_name
-
-    if first_name == "None":
-        first_name = "Empty"
-
-    else:
-        first_name = first_name
-
-    if last_name == "None":
-        last_name = "Empty"
-
-    else:
-        last_name = last_name
-
-    date = str(update.message.date)
-
-    c.execute('SELECT * FROM Members WHERE Chat_id=?', (chat_id2,))
+    c.execute('SELECT * FROM Members WHERE Chat_id=?', (str(chat_id),))
     rows = c.fetchall()
 
     if rows == []:
+        chat_id2 = str(chat_id)
+        first_name = str(update.message.from_user.first_name)
+        last_name = str(update.message.from_user.last_name)
+        user_name = str(update.message.from_user.username)
+        user_id = str(update.message.from_user.id)
+
+        if user_name == "None":
+            user_name = "Empty"
+
+        else:
+            user_name = "@" + user_name
+
+        if first_name == "None":
+            first_name = "Empty"
+
+        else:
+            first_name = first_name
+
+        if last_name == "None":
+            last_name = "Empty"
+
+        else:
+            last_name = last_name
+
+        date = str(update.message.date)
         c.execute('insert into Members(Name,Last_name,User_name,Chat_id, User_id, Time_joined) values(?, ?, ?, ?, ?, ?)', (first_name, last_name, user_name, chat_id2, user_id ,date))
         con.commit()
 
@@ -121,34 +141,26 @@ def main_menu(update, context):
         pass
     
     if chat_id in Admins:
-        if last_name == "Empty":
-            context.bot.send_message(chat_id=chat_id, text="مقام ادمین شما شناسایی شد!")
-            context.bot.send_message(chat_id=chat_id, text="درود <a href='tg://user?id={}'>{}</a> 👋".format(chat_id, update.message.from_user.first_name) + "\n<b>به ربات پزشکی مهر ۱۴۰۰ شیراز</b> خوش اومدی!" + "\nلطفا از منوی زیر انتخاب کنید:", reply_markup=ReplyKeyboardMarkup(keyboard=keyboard_adm, resize_keyboard=True), parse_mode=ParseMode.HTML)
-        
-        else:
-            context.bot.send_message(chat_id=chat_id, text="مقام ادمین شما شناسایی شد!")
-            context.bot.send_message(chat_id=chat_id, text="درود <a href='tg://user?id={}'>{}</a> 👋".format(chat_id, update.message.from_user.last_name + " " + update.message.from_user.first_name) + "\n<b>به ربات پزشکی مهر ۱۴۰۰ شیراز</b> خوش اومدی!" + "\nلطفا از منوی زیر انتخاب کنید:", reply_markup=ReplyKeyboardMarkup(keyboard=keyboard_adm, resize_keyboard=True), parse_mode=ParseMode.HTML)      
+        context.bot.send_message(chat_id=chat_id, text="مقام ادمین شما شناسایی شد!")
+        context.bot.send_message(chat_id=chat_id, text="درود <a href='tg://user?id={}'>{}</a> 👋".format(chat_id, update.message.from_user.first_name) + "\n<b>به ربات پزشکی مهر ۱۴۰۰ شیراز</b> خوش اومدی!" + "\nلطفا از منوی زیر انتخاب کنید:", reply_markup=ReplyKeyboardMarkup(keyboard=keyboard_adm, resize_keyboard=True), parse_mode=ParseMode.HTML)    
     
     else:
-        if last_name == "Empty":
-            context.bot.send_message(chat_id=chat_id, text="درود <a href='tg://user?id={}'>{}</a> 👋".format(chat_id, update.message.from_user.first_name) + "\n<b>به ربات پزشکی مهر ۱۴۰۰ شیراز</b> خوش اومدی!" + "\nلطفا از منوی زیر انتخاب کنید:", reply_markup=ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True), parse_mode=ParseMode.HTML)
-        
-        else:
-            context.bot.send_message(chat_id=chat_id, text="درود <a href='tg://user?id={}'>{}</a> 👋".format(chat_id, update.message.from_user.last_name + " " + update.message.from_user.first_name) + "\n<b>به ربات پزشکی مهر ۱۴۰۰ شیراز</b> خوش اومدی!" + "\nلطفا از منوی زیر انتخاب کنید:", reply_markup=ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True), parse_mode=ParseMode.HTML)
+        context.bot.send_message(chat_id=chat_id, text="درود <a href='tg://user?id={}'>{}</a> 👋".format(chat_id, update.message.from_user.first_name) + "\n<b>به ربات پزشکی مهر ۱۴۰۰ شیراز</b> خوش اومدی!" + "\nلطفا از منوی زیر انتخاب کنید:", reply_markup=ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True), parse_mode=ParseMode.HTML)
+
+def getinfofromjson():
+    with open("files.json") as jj:
+        j = json.load(jj, strict=False)
+    
+    return j
 
 def menu(update, context):
     chat_id = update.message.chat_id
-    Blocked = []
-
-    c.execute('SELECT Chat_id from Blocked')
-    users = c.fetchall()
-
-    for i in range(len(users)):
-        Blocked.append(users[i][0])
+    Blocked = Manage().get_block()
   
     keyboard = [
         [KeyboardButton(text="ترم 1️⃣")],
         [KeyboardButton(text="ترم 2️⃣")],
+        [KeyboardButton(text="🏦 بانک سوال")],
         [KeyboardButton(text="📖 نواریون")],
         [KeyboardButton(text="📎 برنامه دروس و امتحانات")],
         [KeyboardButton(text="👤 پنل کاربری"), KeyboardButton(text="👨‍💻 پشتیبانی")],
@@ -158,6 +170,7 @@ def menu(update, context):
         [KeyboardButton(text="😎 پنل مدیریت")],
         [KeyboardButton(text="ترم 1️⃣")],
         [KeyboardButton(text="ترم 2️⃣")],
+        [KeyboardButton(text="🏦 بانک سوال")],
         [KeyboardButton(text="📖 نواریون")],
         [KeyboardButton(text="📎 برنامه دروس و امتحانات")],
         [KeyboardButton(text="👤 پنل کاربری"), KeyboardButton(text="👨‍💻 پشتیبانی")], 
@@ -174,7 +187,6 @@ def menu(update, context):
     
     else:
         context.bot.send_message(chat_id=chat_id, text="لطفا در سریع ترین زمان ممکن دکمه خروج را فشار دهید", reply_markup=ReplyKeyboardRemove())
-        raise DispatcherHandlerStop
 
 def menu_admin(update, context):
     chat_id = update.message.chat_id
@@ -182,12 +194,13 @@ def menu_admin(update, context):
     if chat_id in Admins:
         keyboard = [
             [KeyboardButton(text="📊 آمار کاربران")],
-            [KeyboardButton(text="👤 دریافت لیست کابران")],
+            [KeyboardButton(text="👤 مشاهده لیست کابران")],
             [KeyboardButton(text="📩 ارسال پیام سراسری")],
             [KeyboardButton(text="📩 ارسال پیام تکی")],
             [KeyboardButton(text="🚫 بن و آنبن کاربران")],
             [KeyboardButton(text="➕ اضافه کردن Prefix")],
             [KeyboardButton(text="➖ حذف کردن Prefix")],
+            [KeyboardButton(text="🗄 دسته بندی Prefix")],
             [KeyboardButton(text=ret_menu)]
         ]
 
@@ -199,29 +212,26 @@ def menu_admin(update, context):
 
 def check_channel(update, context):
     chat_id = update.message.chat_id
-    channel_id  = BOT_ID2
+    #Change Before Config
+    channel_id  = config.CHANNEL
 
     keyboard = [
-        [InlineKeyboardButton(text="برای عضویت کلیک کنید", url="https://telegram.me/" + channel_id)]
+        [InlineKeyboardButton(text="برای عضویت کلیک کنید", url="https://telegram.me/" + channel_id.replace("@", ""))]
     ]
 
-    context.bot.send_message(chat_id=chat_id, text="شما امکان استفاده از ربات را ندارید", reply_markup=ReplyKeyboardRemove())
-    context.bot.send_message(chat_id=chat_id, text="شما هنوز در کانال آرشیو عضو نشده اید، ابتدا در کانال زیر عضو شده و سپس دوباره /start را وارد کنید", reply_markup=InlineKeyboardMarkup(keyboard))
+    context.bot.send_message(chat_id=chat_id, text="شما امکان استفاده از بات را ندارید", reply_markup=ReplyKeyboardRemove())
+    context.bot.send_message(chat_id=chat_id, text="شما هنوز در کانال آرشیو 1400 عضو نشده اید، ابتدا در کانال زیر عضو شده و سپس دوباره /start را وارد کنید", reply_markup=InlineKeyboardMarkup(keyboard))
 
 def start(update, context):
     chat_id = update.message.chat_id
+    channel = config.CHANNEL
     status = []
     ftype_l = ["document", "video", "photo", "voice"]
 
-    chat = context.bot.get_chat_member(chat_id=BOT_ID, user_id=update.message.from_user.id)
+    #Change Before Config
+    chat = context.bot.get_chat_member(chat_id=channel, user_id=update.message.from_user.id)
     status.append(chat.status)
-    Blocked = []
-
-    c.execute('SELECT Chat_id from Blocked')
-    users = c.fetchall()
-
-    for i in range(len(users)):
-        Blocked.append(users[i][0])
+    Blocked = Manage().get_block()
 
     if "left" not in status and 'kicked' not in status and 'restricted' not in status and 'banned' not in status and chat_id not in Blocked:
 
@@ -264,7 +274,6 @@ def start(update, context):
     
     elif chat_id in Blocked:
         context.bot.send_message(chat_id=chat_id, text="لطفا در سریع ترین زمان ممکن دکمه خروج را فشار دهید", reply_markup=ReplyKeyboardRemove())
-        raise DispatcherHandlerStop
 
     else:
         check_channel(update, context)
@@ -272,15 +281,13 @@ def start(update, context):
 def stat(update, context):
     text = update.message.text
     chat_id = update.message.chat_id
-    Blocked = []
+    Blocked = Manage().get_block()
 
-    c.execute('SELECT Chat_id from Blocked')
-    users = c.fetchall()
-
-    for i in range(len(users)):
-        Blocked.append(users[i][0])
+    count = context.user_data.get("usageCount", 0)
+    restrict_since = context.user_data.get("restrictSince", 0)
+    last_message = context.user_data.get("lastMessage", 0)
     
-    if chat_id not in Blocked:
+    if chat_id not in Blocked and not restrict_since:
         if text == "ترم 1️⃣":
             rp = ReplyKeyboardMarkup(keyboard=keyboard_doros_term1, resize_keyboard=True)
             context.bot.send_message(chat_id=chat_id, text="لطفا درس مورد نظر را از منوی زیر انتخاب کنید:", reply_markup=rp)
@@ -288,45 +295,138 @@ def stat(update, context):
             return DOROST1
         
         elif text == "ترم 2️⃣":
-            context.bot.send_message(chat_id=chat_id, text="فایل های مربوط به ترم ۲ بعد از کامل شدن در بات قرار می گیرد")
-        
-        elif text == "📖 نواریون":
-            context.bot.send_message(chat_id=chat_id, text="نواریون مهر ۱۴۰۰" + "\n" + "Coming Soon...!")
-        
-        elif text == "📎 برنامه دروس و امتحانات":
-            jp = j["Program"]
-
-            context.bot.send_document(chat_id=chat_id, document=jp["Emtehan"], caption="📄 برنامه امتحانات ترم جدید" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
-            context.bot.send_document(chat_id=chat_id, document=jp["Koli"], caption="📄 برنامه کلی دروس ترم جدید" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
-            context.bot.send_document(chat_id=chat_id, document=jp["Edqam"], caption="📄 برنامه دروس ادغام ترم جدید" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
-            context.bot.send_document(chat_id=chat_id, document=jp["qEdqam"], caption="📄 برنامه دروس غیر ادغام ترم جدید" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
-            context.bot.send_document(chat_id=chat_id, document=jp["Ekhtiari"], caption="📄 برنامه دروس اختیاری ترم جدید" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
-
-        elif text == "👤 پنل کاربری":
-            if chat_id  not in Admins:
-                context.bot.send_message(chat_id=chat_id, text='👤 شماره کاربری: {} \n👤 نوع کاربر: {}'.format(str(update.message.from_user.id), "کاربر عادی") + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+            if count == MAX_USAGE:
+                context.user_data["restrictSince"] = time.time()
+                update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
             
             else:
-                context.bot.send_message(chat_id=chat_id, text='👤 شماره کاربری: {} \n👤 نوع کاربر: {}'.format(str(update.message.from_user.id), "ادمین :))))))")+ "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_message(chat_id=chat_id, text="فایل های مربوط به ترم ۲ بعد از کامل شدن در بات قرار می گیرد")
+        
+        elif text == "🏦 بانک سوال":
+            keyboard = [
+                [KeyboardButton(text="ترم 1️⃣")],
+                [KeyboardButton(text="ترم 2️⃣")],
+                [KeyboardButton(text=ret)]
+            ]
+
+            rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+
+            context.bot.send_message(chat_id=chat_id, text="لطفا ترم مورد نظر را از منوی زیر انتخاب کنید: ", reply_markup=rp)
+
+            gettermbank(update, context)
+            return GETTERMBANK
+
+        elif text == "📖 نواریون":
+            jn = getinfofromjson()["Navariyoon"]
+            jn_e = getinfofromjson()["Navariyoon_Enable"]
+
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                if jn_e == "True":
+                    for i in jn["file"]:
+                        context.bot.send_document(chat_id=chat_id, document=i, caption=jn["caption"])
+                
+                else:
+                    context.bot.send_message(chat_id=chat_id, text="نواریون مهر ۱۴۰۰" + "\n" + "Coming Soon...!")
+        
+        elif text == "📎 برنامه دروس و امتحانات":
+            jp = getinfofromjson()["Program"]
+
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+                
+                context.bot.send_document(chat_id=chat_id, document=jp["Emtehan"], caption="📄 برنامه امتحانات ترم جدید" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+                context.bot.send_document(chat_id=chat_id, document=jp["Koli"], caption="📄 برنامه کلی دروس ترم جدید" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+                context.bot.send_document(chat_id=chat_id, document=jp["Edqam"], caption="📄 برنامه دروس ادغام ترم جدید" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+                context.bot.send_document(chat_id=chat_id, document=jp["qEdqam"], caption="📄 برنامه دروس غیر ادغام ترم جدید" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+                context.bot.send_document(chat_id=chat_id, document=jp["Ekhtiari"], caption="📄 برنامه دروس اختیاری ترم جدید" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "👤 پنل کاربری":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+                
+                if chat_id  not in Admins:
+                    context.bot.send_message(chat_id=chat_id, text='👤 شماره کاربری: {} \n👤 نوع کاربر: {}'.format(str(update.message.from_user.id), "کاربر عادی") + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+                
+                else:
+                    context.bot.send_message(chat_id=chat_id, text='👤 شماره کاربری: {} \n👤 نوع کاربر: {}'.format(str(update.message.from_user.id), "ادمین :))))))")+ "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
 
         elif text == "👨‍💻 پشتیبانی":
-            context.bot.send_message(chat_id=chat_id, text="در صورتی که سوال انتقاد و یا پیشنهادی برای بات دارید از طریق بات زیر می توانید با ادمین های ما ارتباط برقرار کنید 👇: \n" + "@Sums1400Talk_Bot")
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+    
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_message(chat_id=chat_id, text="در صورتی که سوال انتقاد و یا پیشنهادی برای بات دارید از طریق بات زیر می توانید با ادمین های ما ارتباط برقرار کنید 👇: \n" + "@Sums1400Talk_Bot")
+
         
         elif text == "😎 پنل مدیریت":
             if chat_id in Admins:
                 keyboard = [
                     [KeyboardButton(text="📊 آمار کاربران")],
-                    [KeyboardButton(text="👤 دریافت لیست کابران")],
+                    [KeyboardButton(text="👤 مشاهده لیست کابران")],
                     [KeyboardButton(text="📩 ارسال پیام سراسری")],
                     [KeyboardButton(text="📩 ارسال پیام تکی")],
                     [KeyboardButton(text="🚫 بن و آنبن کاربران")],
                     [KeyboardButton(text="➕ اضافه کردن Prefix")],
                     [KeyboardButton(text="➖ حذف کردن Prefix")],
+                    [KeyboardButton(text="🗄 دسته بندی Prefix")],
                     [KeyboardButton(text=ret_menu)],
                 ]
 
                 markup = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-                context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب کنید:", reply_markup=markup)
+                context.bot.send_message(chat_id=chat_id, text=" پنل مدیریت از طریق سایت زیر نیز در دسترس میباشد: " + "\n" + "https://sumsmd1400.ir/bot"  + "\n\n" + "لطفا یک گزینه را انتخاب کنید:", reply_markup=markup)
                 statadmin(update, context)
                 return STATAD
 
@@ -334,10 +434,30 @@ def stat(update, context):
                 context.bot.send_message(chat_id=chat_id, text="بچه برو دنبال بازیت" + "\n" + "برا ما هکر شده")
 
         else:
-            pass
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
     
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+    elif restrict_since:
+        if (time.time() - restrict_since) >= 300: # 5 minutes
+            del context.user_data["restrictSince"]
+            del context.user_data["usageCount"]
+            update.effective_message.reply_text("⚠️ محدودیت شما به اتمام رسید")
+        else:
+            update.effective_message.reply_text("⚠️ زمان محدودیت شما به اتمام نرسیده است" + "\n" + f"زمان باقی مانده به ثانیه: {str(round(300 - (time.time() - restrict_since)))}")
+
     else:
-        raise DispatcherHandlerStop
+        pass
 
 def statadmin(update, context):
     chat_id = update.message.chat_id
@@ -347,29 +467,8 @@ def statadmin(update, context):
         cm = Manage().count_member()
         context.bot.send_message(chat_id=chat_id, text="📊 تعداد کل کاربران: " + "\n" + str(cm) + "\n" + "📊 تعداد کاربران فعال: "+ "\n" + str(cm))
     
-    elif text == "👤 دریافت لیست کابران":
-
-        row_l = Manage().get_list()
-
-        t = PrettyTable(['Name', 'Last Name', 'ID', 'NumID', 'Join Date'])
-
-        for i in row_l:
-            t.add_row([i[0], i[1], i[2], i[3], i[5]])
-
-        namefile = "users " + time.strftime("%H-%M-%S") + ".txt"
-
-        o = open(namefile, "w", encoding='utf-8')
-        o.write(str(t))
-        o.close()
-
-
-        o = open(namefile, "r+", encoding='utf-8')
-
-        context.bot.send_document(chat_id=chat_id, document=o)
-
-        o.close()
-
-        remove(namefile)
+    elif text == "👤 مشاهده لیست کابران":
+        context.bot.send_message(chat_id=chat_id, text=f'[برای مشاهده لیست کاربران کلیک کنید]({SITE_ADDRESS}/v1/{SEC_TOKEN}/members)', parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True)
 
     elif text == "📩 ارسال پیام سراسری":
         keyboard = [
@@ -398,13 +497,7 @@ def statadmin(update, context):
         ]
         rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
-        Blocked = []
-
-        c.execute('SELECT Chat_id from Blocked')
-        users = c.fetchall()
-
-        for i in range(len(users)):
-            Blocked.append(users[i][0])
+        Blocked = Manage().get_block()
 
         context.bot.send_message(chat_id=chat_id, text="🚫 لیست افراد بن شده:" + "\n" + str(Blocked) + "\n" + "برای بن یا آنبن شماره کاربری کاربر نظر را ارسال کنید:", reply_markup = rp)
 
@@ -441,6 +534,18 @@ def statadmin(update, context):
 
         getpredel(update, context)
         return GETPREDEL
+
+    elif text == "🗄 دسته بندی Prefix":
+        keyboard = [
+            [KeyboardButton(text="ترم 2️⃣")],
+            [KeyboardButton(text=ret)]
+        ]
+        
+        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+
+        context.bot.send_message(chat_id=chat_id,  text="لطفا ترم مورد نظر را انتخاب کنید:",  reply_markup=rp)
+        gettermcateg(update, context)
+        return GETTERMCATEG
 
     elif text == ret_menu:
         menu(update, context)
@@ -503,6 +608,20 @@ def getpredel(update, context):
 
                 menu_admin(update, context)
                 return STATAD      
+
+def gettermcateg(update, context):
+    chat_id = update.message.chat_id
+    text = update.message.text
+
+    if text == "ترم 2️⃣":
+        context.bot.send_message(chat_id=chat_id, text=f"ترم انتخابی: {text}\n\n" + f'[برای مشاهده کلیک کنید]({SITE_ADDRESS}/v1/{SEC_TOKEN}/prefixt2)', parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True)
+    
+    elif text == ret:
+        menu_admin(update, context)
+        return STATAD
+    
+    else:
+        pass
 
 def getpre(update, context):
     text = update.message.text
@@ -607,7 +726,7 @@ def getprefile(update, context):
             c.execute('insert into Prefix(Prefix, Type, File_id, Caption) values(?,?,?,?)', (pre.lower(), "video", str(file_id), caption))
             con.commit()
 
-            context.bot.send_message(chat_id=chat_id, text="✅ لینک دهی به فایل با موفقیت انجام شد" + "\n" + "لینک:" + "\n" + f"https://t.me/{BOT_ID2}?start={pre.lower()}")
+            context.bot.send_message(chat_id=chat_id, text="✅ لینک دهی به فایل با موفقیت انجام شد" + "\n" + "لینک:" + "\n" + f"https://t.me/{BOT_ID2}?start={pre.lower()}", disable_web_page_preview=True)
             menu_admin(update, context)
             return STATAD
             
@@ -620,7 +739,7 @@ def getprefile(update, context):
             c.execute('insert into Prefix(Prefix, Type, File_id, Caption) values(?,?,?,?)', (pre.lower(), "voice", str(file_id), caption))
             con.commit()
 
-            context.bot.send_message(chat_id=chat_id, text="✅ لینک دهی به فایل با موفقیت انجام شد" + "\n" + "لینک:" + "\n" + f"https://t.me/{BOT_ID2}?start={pre.lower()}")
+            context.bot.send_message(chat_id=chat_id, text="✅ لینک دهی به فایل با موفقیت انجام شد" + "\n" + "لینک:" + "\n" + f"https://t.me/{BOT_ID2}?start={pre.lower()}", disable_web_page_preview=True)
             menu_admin(update, context)
             return STATAD
 
@@ -632,7 +751,7 @@ def getprefile(update, context):
             c.execute('insert into Prefix(Prefix, Type, File_id, Caption) values(?,?,?,?)', (pre.lower(), "photo", str(file_id), caption))
             con.commit()
 
-            context.bot.send_message(chat_id=chat_id, text="✅ لینک دهی به فایل با موفقیت انجام شد" + "\n" + "لینک:" + "\n" + f"https://t.me/{BOT_ID2}?start={pre.lower()}")
+            context.bot.send_message(chat_id=chat_id, text="✅ لینک دهی به فایل با موفقیت انجام شد" + "\n" + "لینک:" + "\n" + f"https://t.me/{BOT_ID2}?start={pre.lower()}", disable_web_page_preview=True)
             menu_admin(update, context)
             return STATAD
 
@@ -644,7 +763,7 @@ def getprefile(update, context):
             c.execute('insert into Prefix(Prefix, Type, File_id, Caption) values(?,?,?,?)', (pre.lower(), "document", str(file_id), caption))
             con.commit()
 
-            context.bot.send_message(chat_id=chat_id, text="✅ لینک دهی به فایل با موفقیت انجام شد" + "\n" + "لینک:" + "\n" + f"https://t.me/{BOT_ID2}?start={pre.lower()}")
+            context.bot.send_message(chat_id=chat_id, text="✅ لینک دهی به فایل با موفقیت انجام شد" + "\n" + "لینک:" + "\n" + f"https://t.me/{BOT_ID2}?start={pre.lower()}", disable_web_page_preview=True)
             menu_admin(update, context)
             return STATAD
         
@@ -893,14 +1012,8 @@ def getban(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
 
-    Blocked = []
+    Blocked = Manage().get_block()
 
-    c.execute('SELECT Chat_id from Blocked')
-    users = c.fetchall()
-
-    for i in range(len(users)):
-        Blocked.append(users[i][0])
-    
     if text == ret:
         menu_admin(update, context)
         return STATAD
@@ -951,113 +1064,579 @@ def getban(update, context):
         else:
             context.bot.send_message(chat_id=chat_id, text="⚠️ فرمت نامعتبر")
 
+def gettermbank(update, context):
+    chat_id = update.message.chat_id
+    text = update.message.text
+    Blocked = Manage().get_block()
+
+    count = context.user_data.get("usageCount", 0)
+    restrict_since = context.user_data.get("restrictSince", 0)
+    last_message = context.user_data.get("lastMessage", 0)
+
+    if chat_id not in Blocked and not restrict_since:
+        if text == "ترم 1️⃣":
+            keyboard = copy(keyboard_doros_term1)
+            keyboard.pop(8)
+            keyboard.append([KeyboardButton(text=ret), KeyboardButton(text=ret_menu)])
+
+            rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا درس مورد نظر را از منوی زیر انتخاب کنید:", reply_markup=rp)
+            sendbankt1(update, context)
+            return SENDBANKT1
+
+        elif text == "ترم 2️⃣":
+            #Should define new keyboard based on files
+            keyboard = copy(keyboard_doros_term2)
+            keyboard.pop(13)
+            keyboard.append([KeyboardButton(text=ret), KeyboardButton(text=ret_menu)])
+            keyboard.pop(7)
+            keyboard.pop(10)
+            keyboard.pop(10)
+
+            rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا درس مورد نظر را از منوی زیر انتخاب کنید:", reply_markup=rp)
+            sendbankt2(update, context)
+            return SENDBANKT2
+
+        elif text == ret:
+            menu(update, context)
+            return STAT
+
+        else:
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+    
+    elif restrict_since:
+        if (time.time() - restrict_since) >= 300: # 5 minutes
+            del context.user_data["restrictSince"]
+            del context.user_data["usageCount"]
+            update.effective_message.reply_text("⚠️ محدودیت شما به اتمام رسید")
+        else:
+            update.effective_message.reply_text("⚠️ زمان محدودیت شما به اتمام نرسیده است" + "\n" + f"زمان باقی مانده به ثانیه: {str(round(300 - (time.time() - restrict_since)))}")
+
+    else:
+        pass
+
+def sendbankt1(update, context):
+    chat_id = update.message.chat_id
+    text = update.message.text
+    Blocked = Manage().get_block()
+
+    count = context.user_data.get("usageCount", 0)
+    restrict_since = context.user_data.get("restrictSince", 0)
+    last_message = context.user_data.get("lastMessage", 0)
+
+    jqt1 = getinfofromjson()["QuestionBankT1"]
+
+    if chat_id not in Blocked and not restrict_since:
+        if text == ret_menu:
+            menu(update , context)
+            return STAT
+
+        elif text == ret:
+            rp = ReplyKeyboardMarkup(keyboard_select_term, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا ترم مورد نظر را از منوی زیر انتخاب کنید:", reply_markup=rp)
+
+            return GETTERMBANK
+        
+        elif text == "علوم تشریح 💀":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt1["OTN"], caption="📁 نمونه سوالات میان ترم و پایان ترم علوم تشریح نظری" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+                context.bot.send_document(chat_id=chat_id, document=jqt1["OTA"], caption="📁 نمونه سوالات پایان ترم علوم تشریح عملی" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "بیوشیمی 🧪":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt1["BioChemystreyN"], caption="📁 نمونه سوالات میان ترم و پایان ترم بیوشیمی نظری" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+                context.bot.send_document(chat_id=chat_id, document=jqt1["BioChemystreyA"], caption="📁 نمونه سوالات پایان ترم بیوشیمی عملی" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "فیزیولوژی 🔎":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt1["Physiology"], caption="📁 نمونه سوالات میان ترم و پایان ترم فیزیولوژی" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "روانشناسی 🧠":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt1["Psycology"], caption="📁 نمونه سوالات میان ترم و پایان ترم روانشناسی" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "فیزیک پزشکی 😭":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt1["Medical Physics"], caption="📁 نمونه سوالات میان ترم و پایان ترم فیزیک پزشکی" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "فارسی 🇮🇷":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt1["Persian"], caption="📁 نمونه سوالات میان ترم و پایان ترم ادبیات" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "زبان عمومی " + "1️⃣":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt1["Eng1"], caption="📁 نمونه سوالات میان ترم و پایان ترم زبان عمومی ۱" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "دانش خانواده 👨‍👩‍👧‍👦":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt1["Danesh"], caption="📁 نمونه سوالات میان ترم و پایان ترم دانش خانواده" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+        
+        else:
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+    
+    elif restrict_since:
+        if (time.time() - restrict_since) >= 300: # 5 minutes
+            del context.user_data["restrictSince"]
+            del context.user_data["usageCount"]
+            update.effective_message.reply_text("⚠️ محدودیت شما به اتمام رسید")
+        else:
+            update.effective_message.reply_text("⚠️ زمان محدودیت شما به اتمام نرسیده است" + "\n" + f"زمان باقی مانده به ثانیه: {str(round(300 - (time.time() - restrict_since)))}")
+
+    else:
+        pass
+
+def sendbankt2(update, context):
+    chat_id = update.message.chat_id
+    text = update.message.text
+    Blocked = Manage().get_block()
+
+    count = context.user_data.get("usageCount", 0)
+    restrict_since = context.user_data.get("restrictSince", 0)
+    last_message = context.user_data.get("lastMessage", 0)
+
+    jqt2 = getinfofromjson()["QuestionBankT2"]
+
+    if chat_id not in Blocked and not restrict_since:
+        if text == ret_menu:
+            menu(update , context)
+            return STAT
+
+        elif text == ret:
+            rp = ReplyKeyboardMarkup(keyboard_select_term, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا ترم مورد نظر را از منوی زیر انتخاب کنید:", reply_markup=rp)
+
+            return GETTERMBANK
+
+        elif text == "دستگاه قلب 🫀":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt2["Ghalb"], caption="📁 نمونه سوالات میان ترم و پایان ترم دستگاه قلب" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+                
+        elif text == "دستگاه تنفس 🫁":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt2["Tanafos"], caption="📁 نمونه سوالات میان ترم و پایان ترم دستگاه تنفس" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "دستگاه غدد 🌋":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt2["Ghodad"], caption="📁 نمونه سوالات میان ترم و پایان ترم دستگاه غدد" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+                context.bot.send_document(chat_id=chat_id, document=jqt2["GhodadQoloompaye"], caption="📄 نمونه سوالات علوم پایه دستگاه غدد" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "بیوشیمی دیسیپلین 🧪":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt2["BioChemystreyDN"], caption="📁 نمونه سوالات میان ترم و پایان ترم بیوشیمی دیسیپلین نظری" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+                context.bot.send_document(chat_id=chat_id, document=jqt2["BioChemystreyDA"], caption="📁 نمونه سوالات پایان ترم بیوشیمی دیسیپلین عملی" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "علوم تشریح عملی 💀":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt2["OTA2"], caption="📁 نمونه سوالات پایان ترم علوم تشریح عملی" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "فیزیولوژی عملی 🔎":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt2["PhysiologyA"], caption="📁 نمونه سوالات پایان ترم فیزیولوژی عملی" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "تغذیه 🍫":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt2["Taghziye"], caption="📁 نمونه سوالات میان ترم و پایان ترم اصول تغذیه " + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "زبان عمومی " + "2️⃣":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt2["Eng2"], caption="📁 نمونه سوالات میان ترم و پایان ترم زبان عمومی ۲ " + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "اندیشه اسلامی 📿":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt2["Andisheh"], caption="📁 نمونه سوالات میان ترم و پایان ترم اندیشه اسلامی ۱ " + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+
+        elif text == "انقلاب اسلامی 🕋":
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+            
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+                context.bot.send_document(chat_id=chat_id, document=jqt2["Enghelab"], caption="📁 نمونه سوالات میان ترم و پایان ترم انقلاب اسلامی " + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
+        
+        else:
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
+
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
+
+                    else:
+                        context.user_data["lastMessage"] = time.time()
+
+    elif restrict_since:
+        if (time.time() - restrict_since) >= 300: # 5 minutes
+            del context.user_data["restrictSince"]
+            del context.user_data["usageCount"]
+            update.effective_message.reply_text("⚠️ محدودیت شما به اتمام رسید")
+        else:
+            update.effective_message.reply_text("⚠️ زمان محدودیت شما به اتمام نرسیده است" + "\n" + f"زمان باقی مانده به ثانیه: {str(round(300 - (time.time() - restrict_since)))}")
+
+    else:
+        pass
+
 def dt1(update, context):
     text = update.message.text
     chat_id = update.message.chat_id
+    Blocked = Manage().get_block()
 
-    if text == "علوم تشریح 💀":
-        keyboard = [
-            [KeyboardButton(text="علوم تشریح نظری 💀")],
-            [KeyboardButton(text="علوم تشریح عملی 💀")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
+    keyboard_wv = [
+    [KeyboardButton(text="جزوه / منابع 📔")],
+    [KeyboardButton(text="امتحان ۱۴۰۰ 📕")],
+    [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
+    ]
 
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-        context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup=rp)
-        chooseot(update, context)
-        return CHOT
+    count = context.user_data.get("usageCount", 0)
+    restrict_since = context.user_data.get("restrictSince", 0)
+    last_message = context.user_data.get("lastMessage", 0)
 
-    elif text == "بیوشیمی 🧪":
-        keyboard = [
-            [KeyboardButton(text="بیوشیمی نظری 🧪")],
-            [KeyboardButton(text="بیوشیمی عملی 🧪")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
+    if chat_id not in Blocked and not restrict_since:
+        if text == "علوم تشریح 💀":
+            keyboard = [
+                [KeyboardButton(text="علوم تشریح نظری 💀")],
+                [KeyboardButton(text="علوم تشریح عملی 💀")],
+                [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
+            ]
 
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-        context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup=rp)
-        choosebio(update, context)
-        return CHBIO
+            rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup=rp)
+            chooseot(update, context)
+            return CHOT
 
-    elif text == "فیزیولوژی 🔎":
-        keyboard = [
-            [KeyboardButton(text="کلاس ضبطی / فایل های ویدئویی 🎥")],
-            [KeyboardButton(text="جزوه / منابع 📔")],
-            [KeyboardButton(text="امتحان ۱۴۰۰ 📕")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
+        elif text == "بیوشیمی 🧪":
+            keyboard = [
+                [KeyboardButton(text="بیوشیمی نظری 🧪")],
+                [KeyboardButton(text="بیوشیمی عملی 🧪")],
+                [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
+            ]
 
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-        context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
-        choosesendphysio(update, context)
-        return CHSP
+            rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup=rp)
+            choosebio(update, context)
+            return CHBIO
 
-    elif text == "روانشناسی 🧠":
-        keyboard = [
-            [KeyboardButton(text="کلاس ضبطی / فایل های ویدئویی 🎥")],
-            [KeyboardButton(text="جزوه / منابع 📔")],
-            [KeyboardButton(text="امتحان ۱۴۰۰ 📕")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
+        elif text == "فیزیولوژی 🔎":
+            rp = ReplyKeyboardMarkup(keyboard=keyboard_send, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
+            choosesendphysio(update, context)
+            return CHSP
 
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-        context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
-        choosesendravan(update, context)
-        return CHSR
+        elif text == "روانشناسی 🧠":
+            rp = ReplyKeyboardMarkup(keyboard=keyboard_send, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
+            choosesendravan(update, context)
+            return CHSR
 
-    elif text == "فیزیک پزشکی 😭":
-        keyboard = [
-            [KeyboardButton(text="کلاس ضبطی / فایل های ویدئویی 🎥")],
-            [KeyboardButton(text="جزوه / منابع 📔")],
-            [KeyboardButton(text="امتحان ۱۴۰۰ 📕")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
+        elif text == "فیزیک پزشکی 😭":
+            rp = ReplyKeyboardMarkup(keyboard=keyboard_send, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
+            choosesendphysic(update, context)
+            return CHSPH
 
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-        context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
-        choosesendphysic(update, context)
-        return CHSPH
+        elif text == "فارسی 🇮🇷":
+            rp = ReplyKeyboardMarkup(keyboard=keyboard_wv, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
+            choosesendpersian(update, context)
+            return CHSPE
 
-    elif text == "فارسی 🇮🇷":
-        keyboard = [
-            [KeyboardButton(text="جزوه / منابع 📔")],
-            [KeyboardButton(text="امتحان ۱۴۰۰ 📕")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
+        elif text == "زبان عمومی " + "1️⃣":
+            rp = ReplyKeyboardMarkup(keyboard=keyboard_wv, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
+            choosesendenglish1(update, context)
+            return CHSE1
 
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-        context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
-        choosesendpersian(update, context)
-        return CHSPE
+        elif text == "دانش خانواده 👨‍👩‍👧‍👦":
+            rp = ReplyKeyboardMarkup(keyboard=keyboard_wv, resize_keyboard=True)
+            context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
+            choosesenddanesh(update, context)
+            return CHSDA
+        
+        elif text == ret:
+            menu(update, context)
+            return STAT
+        
+        else:
+            if count == MAX_USAGE:
+                if chat_id not in Admins:
+                    context.user_data["restrictSince"] = time.time()
+                    update.effective_message.reply_text("⚠️ به علت اسپم شما به مدت ۵ دقیقه از بات بلاک شدید")
 
-    elif text == "زبان عمومی " + "1️⃣":
-        keyboard = [
-            [KeyboardButton(text="جزوه / منابع 📔")],
-            [KeyboardButton(text="امتحان ۱۴۰۰ 📕")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
+            else:
+                if chat_id not in Admins:
+                    if (time.time() - last_message) < 5:
+                        context.user_data["usageCount"] = count + 1
+                        context.user_data["lastMessage"] = time.time()
 
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-        context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
-        choosesendenglish1(update, context)
-        return CHSE1
-
-    elif text == "دانش خانواده 👨‍👩‍👧‍👦":
-        keyboard = [
-            [KeyboardButton(text="جزوه / منابع 📔")],
-            [KeyboardButton(text="امتحان ۱۴۰۰ 📕")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
-
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-        context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
-        choosesenddanesh(update, context)
-        return CHSDA
+                    else:
+                        context.user_data["lastMessage"] = time.time()
     
-    elif text == ret:
-        menu(update, context)
-        return STAT
-    
+    elif restrict_since:
+        if (time.time() - restrict_since) >= 300: # 5 minutes
+            del context.user_data["restrictSince"]
+            del context.user_data["usageCount"]
+            update.effective_message.reply_text("⚠️ محدودیت شما به اتمام رسید")
+        else:
+            update.effective_message.reply_text("⚠️ زمان محدودیت شما به اتمام نرسیده است" + "\n" + f"زمان باقی مانده به ثانیه: {str(round(300 - (time.time() - restrict_since)))}")
+
     else:
         pass
 
@@ -1066,27 +1645,14 @@ def choosebio(update, context):
     chat_id = update.message.chat_id
 
     if text == "بیوشیمی نظری 🧪":
-        keyboard = [
-            [KeyboardButton(text="کلاس ضبطی / فایل های ویدئویی 🎥")],
-            [KeyboardButton(text="جزوه / منابع 📔")],
-            [KeyboardButton(text="امتحان ۱۴۰۰ 📕")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
 
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+        rp = ReplyKeyboardMarkup(keyboard=keyboard_send, resize_keyboard=True)
         context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
         choosesendbion(update, context)
         return CHSBION
 
     elif text == "بیوشیمی عملی 🧪":
-        keyboard = [
-            [KeyboardButton(text="کلاس ضبطی / فایل های ویدئویی 🎥")],
-            [KeyboardButton(text="جزوه / منابع 📔")],
-            [KeyboardButton(text="امتحان ۱۴۰۰ 📕")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
-
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+        rp = ReplyKeyboardMarkup(keyboard=keyboard_send, resize_keyboard=True)
         context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
         choosesendbioa(update, context)
         return CHSBIOA
@@ -1108,28 +1674,14 @@ def chooseot(update, context):
     chat_id = update.message.chat_id
 
     if text == "علوم تشریح نظری 💀":
-        keyboard = [
-            [KeyboardButton(text="کلاس ضبطی / فایل های ویدئویی 🎥")],
-            [KeyboardButton(text="جزوه / منابع 📔")],
-            [KeyboardButton(text="امتحان ۱۴۰۰ 📕")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
-
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+        rp = ReplyKeyboardMarkup(keyboard=keyboard_send, resize_keyboard=True)
         context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
 
         choosesendotn(update, context)
         return CHSOTN
 
     elif text == "علوم تشریح عملی 💀":
-        keyboard = [
-            [KeyboardButton(text="کلاس ضبطی / فایل های ویدئویی 🎥")],
-            [KeyboardButton(text="جزوه / منابع 📔")],
-            [KeyboardButton(text="امتحان ۱۴۰۰ 📕")],
-            [KeyboardButton(text=ret), KeyboardButton(text=ret_menu)]
-        ]
-
-        rp = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+        rp = ReplyKeyboardMarkup(keyboard=keyboard_send, resize_keyboard=True)
         context.bot.send_message(chat_id=chat_id, text="لطفا یک گزینه را انتخاب نمایید:", reply_markup = rp)
     
         choosesendota(update, context)
@@ -1150,7 +1702,7 @@ def chooseot(update, context):
 def choosesendota(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    js1 = j["OTA"]
+    js1 = getinfofromjson()["OTA"]
 
     if text == "کلاس ضبطی / فایل های ویدئویی 🎥":
         keyboard = [
@@ -1187,7 +1739,7 @@ def choosesendota(update, context):
 def choosesendotn(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    js1 = j["OTN"]
+    js1 = getinfofromjson()["OTN"]
 
     if text == "کلاس ضبطی / فایل های ویدئویی 🎥":
         keyboard = [
@@ -1236,7 +1788,7 @@ def choosesendotn(update, context):
 def choosesendbioa(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    js1 = j["BioChemystreyA"]
+    js1 = getinfofromjson()["BioChemystreyA"]
 
     if text == "کلاس ضبطی / فایل های ویدئویی 🎥":
         keyboard = [
@@ -1275,7 +1827,7 @@ def choosesendbioa(update, context):
 def choosesendbion(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    js1 = j["BioChemystreyN"]
+    js1 = getinfofromjson()["BioChemystreyN"]
 
     if text == "کلاس ضبطی / فایل های ویدئویی 🎥":
         keyboard = [
@@ -1323,7 +1875,7 @@ def choosesendbion(update, context):
 def choosesendphysio(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    js1 = j["Physiology"]
+    js1 = getinfofromjson()["Physiology"]
 
     if text == "کلاس ضبطی / فایل های ویدئویی 🎥":
         keyboard = [
@@ -1364,7 +1916,7 @@ def choosesendphysio(update, context):
 def choosesendravan(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    js2 = j["Psycology"]
+    js2 = getinfofromjson()["Psycology"]
 
     if text == "کلاس ضبطی / فایل های ویدئویی 🎥":
         keyboard = [
@@ -1402,7 +1954,7 @@ def choosesendravan(update, context):
 def choosesendphysic(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    js3 = j["Medical Physics"]
+    js3 = getinfofromjson()["Medical Physics"]
 
     if text == "کلاس ضبطی / فایل های ویدئویی 🎥":
         keyboard = [
@@ -1447,7 +1999,7 @@ def choosesendphysic(update, context):
 def choosesendpersian(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    js4 = j["Persian"]
+    js4 = getinfofromjson()["Persian"]
 
     if text == "جزوه / منابع 📔":
         context.bot.send_document(chat_id=chat_id, document=js4["jozve"], caption="📄 جزوه ادبیات" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
@@ -1472,7 +2024,7 @@ def choosesendpersian(update, context):
 def choosesendenglish1(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    js5 = j["Eng1"]
+    js5 = getinfofromjson()["Eng1"]
 
     if text == "جزوه / منابع 📔":
         context.bot.send_document(chat_id=chat_id, document=js5["jozve"], caption="📚 کتاب Improving Reading Skill" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
@@ -1497,7 +2049,7 @@ def choosesendenglish1(update, context):
 def choosesenddanesh(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    js6 = j["Danesh"]
+    js6 = getinfofromjson()["Danesh"]
 
     if text == "جزوه / منابع 📔":
         context.bot.send_document(chat_id=chat_id, document=js6["jozve"], caption="📚 کتاب دانش خانواده و جمعیت" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
@@ -1522,7 +2074,7 @@ def choosesenddanesh(update, context):
 def choosesendvideobion(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    jv = j["BioChemystreyN"]["videos"]
+    jv = getinfofromjson()["BioChemystreyN"]["videos"]
 
     if text == "🎞 Carbohydrate 1":
         context.bot.send_video(chat_id=chat_id, video=jv["Carbo1"], caption="🎬 کربوهیدرات ۱" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
@@ -1579,7 +2131,7 @@ def choosesendvideobion(update, context):
 def choosesendvideobioa(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    jv = j["BioChemystreyA"]["videos"]
+    jv = getinfofromjson()["BioChemystreyA"]["videos"]
 
     if text == "🎞 Lab Introduction":
         vidl = jv["Labintro"]
@@ -1624,7 +2176,7 @@ def choosesendvideobioa(update, context):
 def choosesendvideootn(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    jv = j["OTN"]["videos"]
+    jv = getinfofromjson()["OTN"]["videos"]
 
     if text == "🎞 Introduction to Anatomy":
         context.bot.send_video(chat_id=chat_id, video=jv["Intro"], caption="🎬 آشنایی با آناتومی" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
@@ -1687,7 +2239,7 @@ def choosesendvideootn(update, context):
 def choosesendvideoota(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    jv = j["OTA"]["videos"]
+    jv = getinfofromjson()["OTA"]["videos"]
 
     keyboard = [
         [KeyboardButton(text="🎞 Epithelium")],
@@ -1724,7 +2276,7 @@ def choosesendvideoota(update, context):
 def choosesendvideophysio(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    jv = j["Physiology"]["videos"]
+    jv = getinfofromjson()["Physiology"]["videos"]
 
     if text == "🎞 Introduciotion to Cell":
         context.bot.send_video(chat_id=chat_id, video=jv["Introduciotion to Cell P1"], caption="🎬 Introduciotion to Cell P1" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
@@ -1766,7 +2318,7 @@ def choosesendvideophysio(update, context):
 def choosesendvideoravan(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    jv = j["Psycology"]["videos"]
+    jv = getinfofromjson()["Psycology"]["videos"]
 
     if text == "🎞 جلسه اول":
         context.bot.send_video(chat_id=chat_id, video=jv["J1"], caption="🎬 جلسه اول" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
@@ -1799,7 +2351,7 @@ def choosesendvideoravan(update, context):
 def choosesendvideophysic(update, context):
     chat_id = update.message.chat_id
     text = update.message.text
-    jv = j["Medical Physics"]["videos"]
+    jv = getinfofromjson()["Medical Physics"]["videos"]
 
     if text == "🎞 رادیولوژی ۱":
         context.bot.send_document(chat_id=chat_id, document=jv["Movahedi1 Doc"], caption="🎬 رادیولوژی ۱" + "\n\n🤖 ربات تلگرام ورودی مهر ۱۴۰۰ پزشکی شیراز:" + f"\n{BOT_ID}")
@@ -1845,13 +2397,34 @@ def choosesendvideophysic(update, context):
     else:
         pass
 
+def checksys(update, context):
+    chat_id = update.message.chat_id
+
+    try:
+        res = getrequests(f'{SITE_ADDRESS}/v1/check').json()
+    
+    except:
+        res = "Error !"
+
+    if chat_id in Admins:
+        context.bot.send_message(chat_id=chat_id, text=str(res))
+    
+    else:
+        pass
+
 def cancel(update, context):
     chat_id = update.message.chat_id
     context.bot.send_message(chat_id=chat_id, text="Bikhial Sho Haji")
 
+def error_handle(update, context):
+    for i in Admins:
+        context.bot.send_message(chat_id=i, text=str(context.error))
+
 def main():
-    token = config.get('TOKENS', 'main_bot_token')
-    updater = Updater(token=token, persistence=persistence)
+    #Change Before Config
+    token = config.MAIN_BOT_TOKEN
+
+    updater = Updater(token=token, workers=16)
     
     dispatcher = updater.dispatcher
 
@@ -1886,7 +2459,11 @@ def main():
             GETBAN:[MessageHandler(Filters.text, getban)],
             GETPRE:[MessageHandler(Filters.text, getpre)],
             GETPREFILE:[MessageHandler(Filters.all, getprefile)],
-            GETPREDEL:[MessageHandler(Filters.text, getpredel)]
+            GETPREDEL:[MessageHandler(Filters.text, getpredel)],
+            GETTERMBANK:[MessageHandler(Filters.text, gettermbank)],
+            SENDBANKT1 : [MessageHandler(Filters.text, sendbankt1)],
+            SENDBANKT2 : [MessageHandler(Filters.text, sendbankt2)],
+            GETTERMCATEG : [MessageHandler(Filters.text, gettermcateg)]
             
         },
         
@@ -1895,12 +2472,15 @@ def main():
 
         allow_reentry=True,
 
-        persistent=True,
+        name="conv_handler",
 
-        name="conv_handler"
+        run_async=True
+        
     )
 
+    dispatcher.add_handler(CommandHandler('checksys', checksys))
     dispatcher.add_handler(conv_handler)
+    dispatcher.add_error_handler(error_handle)
 
     updater.start_polling()
     updater.idle()

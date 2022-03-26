@@ -188,6 +188,41 @@
       "Ekhtiari" : "BQACAgQAAxkBAAOoYha7GX1SkMSkLOmiMkmxWcMkRPYAAvYJAAKbXtFTim-fXxUBnHQjBA",
       "Koli" : "BQACAgQAAxkBAAOlYha7GckVTFIw768hmg58cPaOCxAAAvcJAAKbXtFTFW11ybTTovMjBA",
       "Emtehan" : "BQACAgQAAxkBAAID2mIao3JHY0uN3Nyrc7-ROP6n7eeWAAKDDQAC8PfYULiFBTagtij7IwQ"
+   },
+
+   "Navariyoon" : {
+      "file" : [""],
+      "caption" : ""
+   },
+
+   "Navariyoon_Enable" : "False",
+
+   "QuestionBankT1" : {
+      "BioChemystreyN" : "BQACAgQAAxkBAAIssmI5nB9JIPLtEVsqH5lGlxNtL69KAAJTCwACsrfRUZVWJICsnND2IwQ",
+      "BioChemystreyA" : "BQACAgQAAxkBAAIssGI5m_dRMSd8wB7pLBi7iVVDbg9RAAJSCwACsrfRUSHVhOHCwvJMIwQ",
+      "OTN" : "BQACAgQAAxkBAAIsvmI5nP0_VCgPUAXXmKHIyWsL2KngAAJZCwACsrfRURM5Q78pD-N5IwQ",
+      "OTA" : "BQACAgQAAxkBAAIsvGI5nMhgy3AtA7bjnv9y1PzfTx8XAAJYCwACsrfRUQMP0vjbKx2OIwQ",
+      "Physiology" : "BQACAgQAAxkBAAIsumI5nKgKFaGWumgPZBwjupLsLlhyAAJbCwACsrfRUa7WBwe73YXRIwQ",
+      "Psycology" : "BQACAgQAAxkBAAIstmI5nGfNBngzX8P7hjQriZjQsrSwAAJVCwACsrfRUb6-JHKGS9UsIwQ",
+      "Medical Physics" : "BQACAgQAAxkBAAIswGI5nRP0BUbf60BYZwtGwCyEsZaiAAJaCwACsrfRUbS3zPKyZnfeIwQ",
+      "Eng1" : "BQACAgQAAxkBAAIsuGI5nIsI9xi_pL91GkHKKDwdGa26AAJWCwACsrfRUYAkkhNlxS0lIwQ",
+      "Persian" : "BQACAgQAAxkBAAIsrmI5m52Yo_meOMAH0il79CXFj8jLAAJRCwACsrfRUVUdo_EeCNu7IwQ",
+      "Danesh" : "BQACAgQAAxkBAAIstGI5nESqX-qrLUG79dLRvdpjcB2FAAJUCwACsrfRUQUyzCQWYniFIwQ"
+   },
+   
+   "QuestionBankT2" : {
+      "BioChemystreyDN" : "BQACAgQAAxkBAAIvnmI86Kht4e0SJUxRQK-i-A9iU1B3AAJrCwAC7BDZUfdf-EKdaTPSIwQ",
+      "BioChemystreyDA" : "BQACAgQAAxkBAAIvnGI86JW6_RV2KF37ZIu9t_kmvo5fAAJpCwAC7BDZUcwr5oj60wa1IwQ",
+      "OTA2" : "BQACAgQAAxkBAAIvrmI86XxT5Cp_p7KRLnULv9RZ-QhgAAJ6CwAC7BDZUd1QlnZW1FKwIwQ",
+      "PhysiologyA" : "BQACAgQAAxkBAAIvqGI86SUqUF8RkvkzrwJQxOjfrrXQAAJxCwAC7BDZUcD3unsAAb67kCME",
+      "Ghalb" : "BQACAgQAAxkBAAIvpGI86Ow03BVavhtB3XyDdh1W63xwAAK1DAACzDzpUaSkEpe2VdAYIwQ",
+      "Ghodad" : "BQACAgQAAxkBAAIvpmI86RK9Na_6cmrqu7oHP53U8grGAAJuCwAC7BDZUd37IsTLgCd3IwQ",
+      "GhodadQoloompaye" : "BQACAgQAAxkBAAIw_2I-N7Vc-gLvoWVIBaUNR-yjPU7ZAALIDgACQHjxUSMXHDk0bNvKIwQ",
+      "Tanafos" : "BQACAgQAAxkBAAIvrGI86WQ70DS1CfxMsdZmu0d94SqpAAJzCwAC7BDZUZn89rK2wknHIwQ",
+      "Taghziye" : "BQACAgQAAxkBAAIvqmI86UoYyMQsjJ7-OiAiES6yO_ilAAJyCwAC7BDZUfmTxQHYekpCIwQ",
+      "Eng2" : "BQACAgQAAxkBAAIvsGI86Y8L7lGq1moHdF-BDvuGq6vZAAJ7CwAC7BDZUQXbVc0-lDRjIwQ",
+      "Andisheh" : "BQACAgQAAxkBAAIvmmI86HoAAcJDIlss69P84IpOnrVe7QACaAsAAuwQ2VHfo3B3RpG31yME",
+      "Enghelab" : "BQACAgQAAxkBAAIvoGI86L8WhJBXUf0ZKuWsab4L58sQAAJsCwAC7BDZUeW8gm_7-h8OIwQ"
    }
 
 }

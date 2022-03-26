@@ -1,2 +1,5 @@
 python-telegram-bot
-prettytable
+flask
+flask-login
+flask-limiter
+requests

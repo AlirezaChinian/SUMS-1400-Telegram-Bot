@@ -1,0 +1,124 @@
+@charset "UTF-8";
+/* CSS Document */
+
+@font-face {
+	font-family: "laleh";
+	font-size: normal;
+	src : url("/static/assests/Lalezar-Regular.ttf") format('truetype');
+	
+}
+
+@font-face {
+	font-family: "iransans";
+	font-size: normal;
+	font-weight: normal;
+	src : url("/static/assests/Iranian\ Sans.ttf") format('truetype');
+	
+}
+
+.center {
+  max-height: 200px;
+  max-width: 300px;
+  width: 300px;
+  height: 150px;
+  margin: auto;
+  display: block;
+}
+
+.center_ico {
+  padding: 2px;
+  max-height: 24px;
+  max-width: 24px;
+  width: 24px;
+  height: 24px;
+  margin: auto;
+  display: inline;
+}
+
+.center_text_all {
+	text-align: center;
+	text-align-last: center;
+}
+
+.center_text {
+	text-align: center;
+	margin-top: 3%;
+	color: black;
+	
+}
+
+@media screen and (max-width: 540px) {
+	
+	.center_text {
+			text-align: center;
+			margin-top: 7%;
+			color: black;
+	}
+}
+
+.center_text2 {
+	text-align: center;
+	margin-top: 6%;
+	color: black;
+}
+
+@media screen and (max-width: 540px) {
+	
+	.center_text2 {
+			text-align: center;
+			margin-top: 18%;
+			color: black;
+	}
+}
+
+.class_p {
+	font-family: "laleh";
+    font-weight: normal;
+	color: black;
+	text-align: center;
+	text-align-last: center;
+}
+
+.class_p2 {
+	font-family: "laleh";
+	font-display:auto;
+	color: red;
+	text-align: center;
+	text-align-last: center;
+}
+
+body {
+ display: block;
+ background-image: url("/static/assests/stethos.jpg");
+ background-color: white;
+ background-size: cover;
+ background-attachment: fixed;
+ background-position: center;
+ background-repeat: no-repeat;
+ height: 100vh;
+}
+
+h1,h2,h3,h4,h5,h6, p .h1, .h2, .h3, .h4, .h5, .h6, .p {
+	font-family: "laleh";
+	color: white;
+}
+
+.footer_class {
+	position:absolute;
+	font-family: "iransans";
+	color: white;
+	text-align: center;
+	text-align-last: center;
+	margin: auto;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
+
+a, .a {
+	color: inherit;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+html, body {margin: 0; height: 100%; overflow: hidden}
