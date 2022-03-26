@@ -36,7 +36,7 @@ Official Telegram  ot of SUMS MD 1400 with full admin panel in Bot and also with
   $ python3 talkbot.py
 ```
 
-> Note: File IDs are unique for each Bot Token so sending file will not work and you will get error.
+> Note: File IDs are unique for each Bot Token so sending file will not work and you will get error(Telegram rules! :) ).
 ## Credits
 [SUMS MD 1400 Bot](https://t.me/sums1400_bot)
 
