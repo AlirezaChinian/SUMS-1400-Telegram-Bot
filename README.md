@@ -12,7 +12,7 @@ Official Telegram Bot of SUMS MD 1400 with full admin panel in Bot and also with
 * flask-login
 * flask-limiter
 * [requests](https://github.com/psf/requests)
-## How to Run it?
+## How to run it?
 1. Install Requirements: 
 ```
   $ pip3 install -r requirements.txt
