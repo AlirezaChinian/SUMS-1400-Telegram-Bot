@@ -8,11 +8,11 @@ Official Telegram Bot of SUMS MD 1400 with full admin panel in Bot and also with
 * Python3
 * pip
 * [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
-* [flask](https://flask.palletsprojects.com)
+* [flask](https://github.com/pallets/flask)
 * flask-login
 * flask-limiter
 * [requests](https://github.com/psf/requests)
-## How to use it?
+## How to Run it?
 1. Install Requirements: 
 ```
   $ pip3 install -r requirements.txt
