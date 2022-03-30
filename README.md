@@ -22,8 +22,8 @@ Official Telegram Bot of SUMS MD 1400 with full admin panel in Bot and also with
   $ python3 database.py
 ```
 3. Define Main Bot and Support Bot Token in config.py
-4. Change Bot admins(needs admins user_ids) in config.py
-5. Change Channel_id(needs for mandatory membership) in config.py
+4. Define Bot admins(needs admins user_ids) in config.py
+5. Define Channel_id(needs for mandatory membership) in config.py
 6. Define Site Address in config.py
 7. Define Sec token and Secret key in config.py
 8. Deploy flaskapp on server with apache2 or nginx
