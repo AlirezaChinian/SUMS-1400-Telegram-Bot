@@ -18,7 +18,7 @@ CHANNEL = ""
 # set admins user_id in this list. values should be integer not string
 ADMINS = []
 
-# max numbers of messages user sent that anti flood can accept and mmore than message will enable block mode for user
+# max numbers of messages user sent that anti flood can accept and more messages will enable block mode for user(5 min)
 # this method is just for common users and it doesn't block admins
 MAX_USAGE = 5
 
