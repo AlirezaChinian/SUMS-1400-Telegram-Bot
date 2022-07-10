@@ -42,4 +42,4 @@ Official Telegram Bot of SUMS MD 1400 with full admin panel in Bot and also with
 
 [SUMS MD 1400 Website](https://sumsmd1400.ir)
 ## License
-SUMS 1400 Telegram Bot is licensed under the [GNU General Public License v3.0](https://github.com/AlirezaChinian/SUMS-1400-Telegram-Bot/blob/main/LICENSE)
+SUMS MD 1400 Telegram Bot is licensed under the [GNU General Public License v3.0](https://github.com/AlirezaChinian/SUMS-1400-Telegram-Bot/blob/main/LICENSE)
