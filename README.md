@@ -1,4 +1,4 @@
-# SUMS 1400 Telegram Bot v 1.0
+# SUMS MD 1400 Telegram Bot v 1.0
 [![LICENSE](https://img.shields.io/badge/LICENSE-GPL--3.0-green)](https://github.com/AlirezaChinian/SUMS-1400-Telegram-Bot/blob/main/LICENSE)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/python-telegram-bot.svg)](https://www.python.org)
 [![Bot API versions](https://img.shields.io/badge/Bot%20API-5.7-blue?logo=telegram)](https://api.telegram.org)
