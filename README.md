@@ -3,7 +3,7 @@
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/python-telegram-bot.svg)](https://www.python.org)
 [![Bot API versions](https://img.shields.io/badge/Bot%20API-5.7-blue?logo=telegram)](https://api.telegram.org)
 
-Official Telegram Bot of SUMS MD 1400 with full admin panel in Bot and also with flask app and a Supoort Bot.
+Official Telegram Bot of SUMS MD 1400 with full admin panel in Bot and also with flask app and a Support Bot.
 ## Requirements
 * Python3
 * pip
